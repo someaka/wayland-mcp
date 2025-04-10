@@ -1,0 +1,16 @@
+{
+  "name": "@someaka/wayland-mcp",
+  "version": "0.1.0",
+  "description": "MCP bridge for Wayland screenshot and VLM agent",
+  "main": "wayland_mcp.js",
+  "bin": {
+    "wayland_mcp": "./wayland_mcp.js"
+  },
+  "type": "module",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
