@@ -1,0 +1,49 @@
+# Node.js
+node_modules/
+node/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg-info/
+# Ignore all contents of mcp-venv (redundant, but explicit)
+mcp-venv/*
+
+dist/
+build/
+venv/
+
+mcp-venv/*
+.venv/
+.env
+.env.*
+
+# Logs
+*.log
+
+# Editor/project files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Test/coverage
+.coverage
+coverage.*
+htmlcov/
+
+# Misc
+*.lock

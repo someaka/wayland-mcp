@@ -11,6 +11,8 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "dependencies": {
-    "node-fetch": "^2.6.7"
+    "@someaka/wayland-mcp": "^0.1.0",
+    "node-fetch": "^2.6.7",
+    "wayland-mcp": "^0.1.0"
   }
 }
