@@ -16,7 +16,6 @@ __pycache__/
 mcp-venv/*
 
 dist/
-build/
 venv/
 
 mcp-venv/*

@@ -1,0 +1,24 @@
+[project]
+name = "wayland-mcp"
+version = "0.1.9"
+description = "Wayland MCP server (Python, uvx-compatible)"
+authors = [{ name = "someaka" }]
+dependencies = [
+    "flask>=3.0.0",
+    "requests>=2.32.3",
+    "pillow>=11.0.0",
+    "python-dotenv>=1.0.0"
+]
+requires-python = ">=3.8"
+
+[project.scripts]
+wayland-mcp = "wayland_mcp.server_mcp:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["wayland_mcp"]
+
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
