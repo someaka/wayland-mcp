@@ -1,1 +1,0 @@
-wayland_mcp.js

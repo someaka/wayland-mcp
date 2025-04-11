@@ -1,13 +1,14 @@
 [project]
 name = "wayland-mcp"
-version = "0.1.9"
+version = "0.1.14"
 description = "Wayland MCP server (Python, uvx-compatible)"
 authors = [{ name = "someaka" }]
 dependencies = [
     "flask>=3.0.0",
     "requests>=2.32.3",
     "pillow>=11.0.0",
-    "python-dotenv>=1.0.0"
+    "python-dotenv>=1.0.0",
+    "fastmcp"
 ]
 requires-python = ">=3.8"
 
