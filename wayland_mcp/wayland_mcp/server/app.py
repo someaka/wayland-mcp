@@ -61,7 +61,10 @@ def restore_effects():
     except Exception as e:
         logging.error(f"Error restoring effects: {e}")
 
-def capture_screenshot(output_path="screenshot.png", mode=None, geometry=None):
+def capture_screenshot(output_path=None, mode=None, geometry=None):
+    """Optimized screenshot capture with minimal effects"""
+    if output_path is None:
+        output_path = os.path.abspath("screenshot.png")
     """Optimized screenshot capture with minimal effects"""
     logging.info('[capture_screenshot] called with silent mode')
     
@@ -133,13 +136,79 @@ class VLMAgent:
             logging.info("VLMAgent initialized with valid API key")
 
     def analyze_screenshot(self, image_path: str, prompt: str) -> str:
-        """Analyze screenshot using VLM"""
+        """Analyze screenshot using Kimi-VL model"""
         try:
             if not self.api_key:
+                logging.error("No API key configured for VLMAgent")
                 return "Error: No API key configured for VLMAgent"
-                
-            # Implement actual VLM analysis here
-            return f"Analysis for {image_path} with prompt: {prompt}"
+
+            import base64
+            import requests
+            import time
+            import json
+
+            # Verify image exists
+            if not os.path.exists(image_path):
+                logging.error(f"Image file not found: {image_path}")
+                return f"Error: Image file not found - {image_path}"
+
+            # Encode image
+            try:
+                with open(image_path, "rb") as image_file:
+                    file_size = os.path.getsize(image_path)
+                    logging.info(f"Processing image: {image_path} ({file_size} bytes)")
+                    encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                    logging.info(f"Image encoded successfully ({len(encoded_image)} chars)")
+            except Exception as e:
+                logging.error(f"Failed to encode image: {str(e)}")
+                return f"Error: Failed to process image - {str(e)}"
+
+            headers = {
+                "Authorization": f"Bearer {self.api_key.strip()}",
+                "HTTP-Referer": "https://github.com/your-repo",
+                "X-Title": "Wayland MCP",
+                "Content-Type": "application/json"
+            }
+            logging.info(f"Using API key starting with: {self.api_key[:8]}...")
+
+            payload = {
+                "model": "moonshotai/kimi-vl-a3b-thinking:free",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": f"data:image/png;base64,{encoded_image}"}
+                        ]
+                    }
+                ],
+                "max_tokens": 1000
+            }
+
+            logging.info(f"Sending VLM request with prompt: {prompt}")
+            try:
+                start_time = time.time()
+                response = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=60
+                )
+                elapsed = time.time()-start_time
+                logging.info(f"VLM request completed in {elapsed:.2f}s")
+
+                if response.status_code == 200:
+                    result = response.json()['choices'][0]['message']['content']
+                    logging.info(f"VLM analysis result: {result[:200]}...")
+                    return result
+                else:
+                    error_msg = f"VLM API error: {response.status_code} - {response.text}"
+                    logging.error(error_msg)
+                    return error_msg
+            except Exception as e:
+                error_msg = f"VLM request failed: {str(e)}"
+                logging.error(error_msg)
+                return error_msg
         except Exception as e:
             logging.error(f"VLM analysis failed: {e}")
             return ""

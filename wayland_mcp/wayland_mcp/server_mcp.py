@@ -57,6 +57,31 @@ def execute_action(action: str) -> bool:
     # TODO: Implement action execution logic (key press, click, type)
     return True
 
+@mcp.tool()
+def capture_and_analyze(prompt: str) -> dict:
+    """Capture screenshot and analyze it with VLM"""
+    try:
+        # Capture screenshot
+        result = capture_screenshot()
+        if not result.get("success"):
+            return {"success": False, "error": result.get("error", "Capture failed")}
+        
+        # Verify file exists
+        filename = result["filename"]
+        if not os.path.exists(filename):
+            return {"success": False, "error": "Screenshot file not found"}
+        
+        # Analyze screenshot
+        analysis = vlm_agent.analyze_screenshot(filename, prompt)
+        return {
+            "success": True,
+            "filename": filename,
+            "analysis": analysis,
+            "filesize": os.path.getsize(filename)
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 if __name__ == "__main__":
     mcp.run()
 
