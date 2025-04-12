@@ -1,6 +1,6 @@
 [project]
 name = "wayland-mcp"
-version = "0.1.14"
+version = "0.1.15"
 description = "Wayland MCP server (Python, uvx-compatible)"
 authors = [{ name = "someaka" }]
 dependencies = [
