@@ -16,10 +16,21 @@ def configure_environment():
         'PULSE_PROP_OVERRIDE': 'filter.want=echo-cancel'
     })
     
-    # Ensure silent sound theme exists
-    sound_dir = os.path.expanduser("~/.local/share/sounds/silent/stereo")
-    os.makedirs(sound_dir, exist_ok=True)
-    open(os.path.join(sound_dir, "screen-capture.oga"), 'w').close()
+    # Ensure silent sound theme exists in system or user location
+    system_sound_dir = "/usr/share/sounds/silent/stereo"
+    user_sound_dir = os.path.expanduser("~/.local/share/sounds/silent/stereo")
+    
+    # Try system location first
+    if not os.path.exists(system_sound_dir):
+        os.makedirs(user_sound_dir, exist_ok=True)
+        sound_dir = user_sound_dir
+    else:
+        sound_dir = system_sound_dir
+    
+    # Create silent sound file if needed
+    sound_file = os.path.join(sound_dir, "screen-capture.oga")
+    if not os.path.exists(sound_file):
+        open(sound_file, 'w').close()
     
     env['SOUND_THEME'] = 'silent'
     return env
@@ -61,11 +72,20 @@ def restore_effects():
     except Exception as e:
         logging.error(f"Error restoring effects: {e}")
 
-def capture_screenshot(output_path=None, mode=None, geometry=None):
-    """Optimized screenshot capture with minimal effects"""
+def capture_screenshot(output_path=None, mode="auto", geometry=None):
+    """
+    Capture screenshot with optional region selection
+    
+    Args:
+        output_path: Output file path
+        mode: 'auto'|'region'|'window' - Capture mode
+        geometry: Optional pre-defined geometry (x,y,w,h)
+        
+    Returns:
+        dict: {'success': bool, 'filename': str, 'error': str}
+    """
     if output_path is None:
         output_path = os.path.abspath("screenshot.png")
-    """Optimized screenshot capture with minimal effects"""
     logging.info('[capture_screenshot] called with silent mode')
     
     env = configure_environment()
@@ -96,12 +116,26 @@ def capture_screenshot(output_path=None, mode=None, geometry=None):
                 ["gnome-screenshot", "-f", output_path],
                 env=env,
                 capture_output=True,
-                timeout=15
+                timeout=30  # Increased timeout for slower systems
             )
             if result.returncode == 0:
                 return {"success": True, "filename": output_path}
         except Exception as e:
             logging.error(f"gnome-screenshot failed: {e}")
+
+        # Handle region/window selection
+        if mode == "region" and not geometry:
+            try:
+                if shutil.which("slurp"):
+                    result = subprocess.run(["slurp"], capture_output=True, text=True)
+                    if result.returncode == 0:
+                        geometry = result.stdout.strip()
+                elif shutil.which("xrandr"):
+                    # Basic X11 region selection fallback
+                    result = subprocess.run(["xrandr | grep ' connected'"], shell=True, capture_output=True)
+                    # Parse output to get screen geometry
+            except Exception as e:
+                logging.warning(f"Region selection failed: {e}")
 
         # 3. Final fallback to grim if on Wayland
         if os.environ.get('WAYLAND_DISPLAY') and shutil.which("grim"):
@@ -110,7 +144,7 @@ def capture_screenshot(output_path=None, mode=None, geometry=None):
                 if mode == "region" and shutil.which("slurp"):
                     cmd = ["grim", "-g", "$(slurp)", output_path]
                 
-                subprocess.run(cmd, env=env, check=True, timeout=10)
+                subprocess.run(cmd, env=env, check=True, timeout=20)  # Increased timeout for slower systems
                 return {"success": True, "filename": output_path}
             except Exception as e:
                 logging.error(f"Grim fallback failed: {e}")
@@ -172,7 +206,7 @@ class VLMAgent:
             logging.info(f"Using API key starting with: {self.api_key[:8]}...")
 
             payload = {
-                "model": "moonshotai/kimi-vl-a3b-thinking:free",
+                "model": os.environ.get("VLM_MODEL", "moonshotai/kimi-vl-a3b-thinking:free"),
                 "messages": [
                     {
                         "role": "user",
