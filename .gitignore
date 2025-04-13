@@ -23,6 +23,8 @@ mcp-venv/*
 .env
 .env.*
 
+.roo/*
+
 # Logs
 *.log
 
@@ -46,3 +48,6 @@ htmlcov/
 
 # Misc
 *.lock
+.roo/mcp.json
+.roo/mcp.json
+screenshot.png
