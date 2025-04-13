@@ -116,7 +116,11 @@ def _draw_tick(draw: ImageDraw.Draw, tick_info: TickInfo, font: ImageFont.FreeTy
     """Draws a major or mid tick mark with its label."""
     if horizontal:
         x = tick_info.pos + settings.size
-        draw.line((x, settings.size - tick_info.length, x, settings.size), fill=settings.color, width=1)
+        draw.line(
+            (x, settings.size - tick_info.length, x, settings.size),
+            fill=settings.color,
+            width=1
+        )
         text_width = font.getlength(tick_info.text)
         draw.text(
             (
@@ -127,7 +131,11 @@ def _draw_tick(draw: ImageDraw.Draw, tick_info: TickInfo, font: ImageFont.FreeTy
         )
     else:
         y = tick_info.pos + settings.size
-        draw.line((settings.size - tick_info.length, y, settings.size, y), fill=settings.color, width=1)
+        draw.line(
+            (settings.size - tick_info.length, y, settings.size, y),
+            fill=settings.color,
+            width=1
+        )
         text_width = font.getlength(tick_info.text)
         text_x = max(
             2, settings.size - tick_info.length - text_width - 2

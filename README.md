@@ -20,11 +20,6 @@ A Wayland screenshot and analysis tool with MCP (Model Control Protocol) integra
   - `capture_and_analyze`: Combined capture+analysis
   - `compare_images`: Visual diff tool
 
-## Installation
-
-```bash
-pip install wayland-mcp
-```
 
 ## Configuration
 
