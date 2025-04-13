@@ -4,6 +4,9 @@ This module initializes the FastMCP server, loads configuration and API keys,
 and defines all MCP tools for screenshot capture, image analysis, and system actions.
 """
 
+# pylint: disable=broad-exception-caught
+
+
 import logging
 import logging.handlers
 import os
@@ -17,6 +20,7 @@ from wayland_mcp.server.app import (
     compare_images as compare_func,
 )
 from .add_rulers import add_rulers
+from .mouse_utils import MouseController
 
 # Try to get API key from environment first
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
@@ -59,6 +63,7 @@ if not OPENROUTER_API_KEY:
 
 # Initialize VLMAgent with the loaded key
 vlm_agent = VLMAgent(OPENROUTER_API_KEY)
+mouse = MouseController()
 print(f"VLMAgent initialized with API key: {bool(vlm_agent.api_key)}")
 # Print first 8 chars of API key if present (for debug)
 if vlm_agent.api_key:
@@ -83,6 +88,42 @@ logging.getLogger().setLevel(logging.INFO)  # Set desired log level
 mcp = FastMCP("Wayland MCP")
 logging.info("Initialized FastMCP server, will run on port %d.", PORT)
 
+
+@mcp.tool()
+def move_mouse(x: int, y: int) -> dict:
+    """Move mouse to specified coordinates"""
+    try:
+        mouse.move_to(x, y)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@mcp.tool()
+def click_mouse() -> dict:
+    """Simulate left mouse click (only left click supported)"""
+    try:
+        mouse.click()
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@mcp.tool()
+def drag_mouse(x1: int, y1: int, x2: int, y2: int) -> dict:
+    """Perform drag operation from (x1,y1) to (x2,y2)"""
+    try:
+        mouse.drag(x1, y1, x2, y2)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@mcp.tool()
+def scroll_mouse(amount: int) -> dict:
+    """Scroll vertically (positive=up, negative=down)"""
+    try:
+        mouse.scroll(amount)
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 @mcp.tool()
 def capture_screenshot() -> dict[str, str | bool]:
@@ -179,24 +220,38 @@ def _handle_press_action(key: str) -> bool:
     return False
 
 def _handle_click_action(action: str) -> bool:
-    """Handle mouse click using xdotool."""
+    """Handle mouse click using ydotool for Wayland."""
     # Validate coordinates
     coords = _parse_click_coordinates(action)
     if not coords:
         return False
 
-    # Check for xdotool installation
-    if not shutil.which("xdotool"):
-        logging.error("xdotool not found - install with: sudo apt install xdotool")
-        return False
+    # Try ydotool first (Wayland compatible)
+    if shutil.which("ydotool"):
+        try:
+            subprocess.run(
+                [
+                    "ydotool", "mousemove", "--absolute",
+                    "--x", str(coords[0]), "--y", str(coords[1])
+                ],
+                check=True,
+                timeout=5
+            )
+            return True
+        except Exception as e:
+            logging.error("ydotool failed: %s", e)
 
-    # Prepare execution environment
-    env = _prepare_x11_environment()
-    if not env:
-        return False
+    # Fallback to xdotool for X11
+    if shutil.which("xdotool"):
+        env = _prepare_x11_environment()
+        if env:
+            return _execute_click_command(coords[0], coords[1], env)
 
-    # Execute the click command
-    return _execute_click_command(coords[0], coords[1], env)
+    logging.error(
+        "No compatible mouse control tool found "
+        "(install ydotool for Wayland or xdotool for X11)"
+    )
+    return False
 
 def _parse_click_coordinates(action: str) -> tuple[int, int] | None:
     """Parse and validate click coordinates from action string."""
@@ -257,26 +312,52 @@ def _execute_click_command(x: int, y: int, env: dict) -> bool:
         return False
 
 def _handle_drag_action(action: str) -> bool:
-    """Handle mouse drag using wlrctl."""
+    """Handle mouse drag using xdotool."""
     coords = action[5:].split(":")
     if len(coords) != 2:
         logging.error("Drag action requires start and end coordinates")
         return False
-    x1, y1 = map(int, coords[0].split(","))
-    x2, y2 = map(int, coords[1].split(","))
-    if shutil.which("wlrctl"):
-        subprocess.run(["wlrctl", "pointer", "move", str(x1), str(y1)], check=True)
-        subprocess.run(["wlrctl", "pointer", "button", "left", "press"], check=True)
-        subprocess.run(["wlrctl", "pointer", "move", str(x2), str(y2)], check=True)
-        subprocess.run(["wlrctl", "pointer", "button", "left", "release"], check=True)
+    try:
+        x1, y1 = map(int, coords[0].split(","))
+        x2, y2 = map(int, coords[1].split(","))
+    except ValueError as e:
+        logging.error("Invalid coordinate format: %s", e)
+        return False
+
+    # Check for xdotool installation
+    if not shutil.which("xdotool"):
+        logging.error("xdotool not found - install with: sudo apt install xdotool")
+        return False
+
+    # Prepare execution environment
+    env = _prepare_x11_environment()
+    if not env:
+        return False
+
+    # Execute drag command sequence with delays
+    command = [
+        "xdotool", "mousemove", str(x1), str(y1),
+        "sleep", "0.2", "mousedown", "1",
+        "sleep", "0.2", "mousemove", str(x2), str(y2),
+        "sleep", "0.2", "mouseup", "1"
+    ]
+
+    try:
+        subprocess.run(
+            command,
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        logging.info("xdotool drag executed successfully")
         return True
-    logging.error(
-        "wlrctl not found - install with:\n"
-        "  Debian/Ubuntu: sudo apt install wlrctl\n"
-        "  Arch: sudo pacman -S wlrctl\n"
-        "Or build from source: https://github.com/emersion/wlrctl"
-    )
-    return False
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        logging.error("xdotool drag command failed: %s", e)
+        if hasattr(e, "stderr") and e.stderr:
+            logging.error("Command error: %s", e.stderr)
+        return False
 
 
 @mcp.tool()
