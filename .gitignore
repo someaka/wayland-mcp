@@ -53,4 +53,3 @@ htmlcov/
 screenshot.png
 wayland_mcp/test_evemu_drag.py
 wayland_mcp/test_mouse.py
-wayland_mcp/setup.sh

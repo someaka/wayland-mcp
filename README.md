@@ -20,10 +20,19 @@ A Wayland screenshot and analysis tool with MCP (Model Control Protocol) integra
   - `capture_and_analyze`: Combined capture+analysis
   - `compare_images`: Visual diff tool
 
-
 ## Input Control Setup
 
-If you want the MCP server to control the mouse (e.g., with xdotool), you must set the correct XAUTHORITY environment variable so the server can authenticate with your X session.
+If you want the MCP server to control the mouse (e.g., with xdotool), you must:
+
+  run the setup script:
+
+  ```bash
+  ./wayland_mcp/setup.sh
+  ```
+
+  This script will configure the necessary permissions for evemu-event, allowing the MCP server to control the mouse.
+
+  Set the correct XAUTHORITY environment variable so the server can authenticate with your X session.
 
 **How to find your XAUTHORITY file:**
 
