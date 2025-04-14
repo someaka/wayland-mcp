@@ -1,3 +1,0 @@
-[MASTER]
-init-hook='import sys; sys.path.append("./wayland-mcp ")'
-ignore-patterns=test_.*\.py,^wayland_mcp/venv/,^dist/,^.*/tests?/.*\.py$
