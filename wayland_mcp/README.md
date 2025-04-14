@@ -49,7 +49,6 @@ Add to your MCP server config (e.g., `.roo/mcp.json`):
         "VLM_MODEL": "qwen/qwen2.5-vl-72b-instruct:free",
         "XDG_RUNTIME_DIR": "/run/user/1000",
         "WAYLAND_MCP_PORT": "4999",
-        "PYTHONPATH": "wayland-mcp",
         "DISPLAY": ":0",
         "WAYLAND_DISPLAY": "wayland-0",
         "XDG_SESSION_TYPE": "wayland"
