@@ -28,3 +28,22 @@ sudo -l | grep -q 'NOPASSWD.*evemu-event' && echo "evemu-event Sudoers OK" || ec
 
 echo -e "\nSetup complete! You can now use evemu-event without sudo."
 echo "Both current and future sessions are configured."
+
+# 5. Add user to input group for persistent access
+echo "Adding $USER to input group..."
+sudo usermod -aG input $USER
+
+# 6. Immediate keyboard device access
+echo "Temporarily making input devices writable..."
+for dev in /dev/input/event*; do
+    sudo chmod 666 $dev 2>/dev/null
+done
+
+# 7. Persistent udev rule for keyboard access
+echo "Creating udev rule for keyboard access..."
+UDEV_RULE="KERNEL==\"event*\", GROUP=\"input\", MODE=\"0666\""
+echo $UDEV_RULE | sudo tee /etc/udev/rules.d/99-input.rules >/dev/null
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
+echo -e "\nKeyboard setup complete!"

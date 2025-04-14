@@ -54,3 +54,5 @@ wayland_mcp/test_mouse.py
 test_openrouter.py
 screenshot1.png
 screenshot.png
+test_evemu_type.py
+test_wtype.py

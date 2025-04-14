@@ -13,7 +13,6 @@ import time
 import logging
 import base64
 import requests
-import json
 
 
 def configure_environment():
@@ -218,7 +217,6 @@ class VLMAgent:
         self,
         img1_path: str,
         img2_path: str,
-        prompt: str = None
     ) -> str:
         """Compare two images using VLM analysis"""
         if not self.api_key:
@@ -258,7 +256,8 @@ class VLMAgent:
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Compare these two screenshots in detail. Focus on:"},
+                        {"type": "text", "text": "Compare these two screenshots in detail."},
+                        {"type": "text", "text": "Focus on:"},
                         {"type": "text", "text": "1. Application windows and their content"},
                         {"type": "text", "text": "2. Layout and positioning differences"},
                         {"type": "text", "text": "3. Any visual changes between them"},
@@ -291,7 +290,10 @@ class VLMAgent:
             )
             if response.status_code == 200:
                 return response.json()["choices"][0]["message"]["content"]
-            return f"API error: {response.status_code} - {response.text}"
+            return (
+                f"API error: {response.status_code} - "
+                f"{response.text}"
+            )
         except requests.exceptions.RequestException as e:
             return f"Request failed: {str(e)}"
 
