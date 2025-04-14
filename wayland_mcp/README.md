@@ -25,8 +25,7 @@
 - **Advanced input simulation:**
   - [x] Typing, key presses, clicks
   - [x] Mouse dragging between coordinates
-  - [ ] Vertical/horizontal scrolling
-  - [ ] Cross-platform support
+  - [x] Vertical/horizontal scrolling
 - **Screen Capture and VLM Integration:** AI-powered screenshot analysis
 - **MCP Tools:**
   - `capture_screenshot`: Fullscreen/region capture
@@ -82,7 +81,7 @@ Add the following to the `"env"` section for your MCP server (e.g., `.roo/mcp.js
 ## Development
 
 ```bash
-git clone https://github.com/your-repo/wayland-mcp
+git clone https://github.com/someaka/wayland-mcp
 cd wayland-mcp
 pip install -e .
 ```
@@ -93,7 +92,3 @@ pip install -e .
 
 GPT3
 
----
-
-*Need help?*  
-Open an issue on [GitHub](https://github.com/someaka/wayland-mcp/issues) or check the project discussions for support.

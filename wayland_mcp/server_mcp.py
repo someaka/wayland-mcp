@@ -1,7 +1,14 @@
 """Wayland MCP server main entry point and MCP tool definitions.
 
-This module initializes the FastMCP server, loads configuration and API keys,
-and defines all MCP tools for screenshot capture, image analysis, and system actions.
+This module provides:
+- FastMCP server initialization
+- Configuration and API key loading
+- MCP tool definitions for:
+  * Screenshot capture with measurement rulers
+  * Image comparison and analysis
+  * Mouse control (move, click, drag, scroll)
+  * System action execution
+- Main server entry point and execution
 """
 
 # pylint: disable=broad-exception-caught
@@ -14,13 +21,12 @@ import json
 import shutil
 import subprocess
 from fastmcp import FastMCP
-from wayland_mcp.server.app import (
+from wayland_mcp.app import (
     capture_screenshot as capture_func,
     VLMAgent,
-    compare_images as compare_func,
 )
-from .add_rulers import add_rulers
-from .mouse_utils import MouseController
+from wayland_mcp.add_rulers import add_rulers
+from wayland_mcp.mouse_utils import MouseController
 
 # Try to get API key from environment first
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
@@ -46,7 +52,9 @@ if not OPENROUTER_API_KEY:
                 "OPENROUTER_API_KEY"
             ]
             logging.info(
-                "API Key loaded from %s. First 8 chars: %s...", config_path, OPENROUTER_API_KEY[:8]
+                "API Key loaded from %s. First 8 chars: %s...",
+                config_path,
+                OPENROUTER_API_KEY[:8],
             )
     except FileNotFoundError:
         logging.warning("Config file not found at %s", config_path)
@@ -76,13 +84,11 @@ except ValueError:
     PORT = 4999
 
 # Configure logging to file
-# File logging is disabled by default.
-# To enable, uncomment the following lines:
-# log_file = "mcp_server.log"
-# log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-# log_handler = logging.FileHandler(log_file)
-# log_handler.setFormatter(log_formatter)
-# logging.getLogger().addHandler(log_handler)
+log_file = "/tmp/wayland-mcp.log"
+log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+log_handler = logging.FileHandler(log_file)
+log_handler.setFormatter(log_formatter)
+logging.getLogger().addHandler(log_handler)
 logging.getLogger().setLevel(logging.INFO)  # Set desired log level
 
 mcp = FastMCP("Wayland MCP")
@@ -94,40 +100,48 @@ def move_mouse(x: int, y: int) -> dict:
     """Move mouse to specified coordinates"""
     try:
         mouse.move_to(x, y)
-        return {'success': True}
+        return {"success": True}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {"success": False, "error": str(e)}
+
 
 @mcp.tool()
 def click_mouse() -> dict:
     """Simulate left mouse click (only left click supported)"""
     try:
         mouse.click()
-        return {'success': True}
+        return {"success": True}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {"success": False, "error": str(e)}
+
 
 @mcp.tool()
 def drag_mouse(x1: int, y1: int, x2: int, y2: int) -> dict:
     """Perform drag operation from (x1,y1) to (x2,y2)"""
     try:
         mouse.drag(x1, y1, x2, y2)
-        return {'success': True}
+        return {"success": True}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {"success": False, "error": str(e)}
+
 
 @mcp.tool()
 def scroll_mouse(amount: int) -> dict:
     """Scroll vertically (positive=up, negative=down)"""
     try:
         mouse.scroll(amount)
-        return {'success': True}
+        return {"success": True}
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {"success": False, "error": str(e)}
+
 
 @mcp.tool()
-def capture_screenshot() -> dict[str, str | bool]:
+def capture_screenshot(filename: str = "screenshot.png") -> dict[str, str | bool]:
     """Capture a screenshot of the current display with measurement rulers
+
+    Args:
+        filename (str, optional): The filename to save the screenshot as.
+            Defaults to "screenshot.png".
 
     Returns:
         dict: {
@@ -136,11 +150,8 @@ def capture_screenshot() -> dict[str, str | bool]:
             'error': str if not success
         }
     """
-    # Use module-level logging
-
     logging.info("[MCP] capture_screenshot tool called")
     try:
-        filename = "screenshot.png"
         result = capture_func(filename)
         if not isinstance(result, dict) or not result.get("success"):
             return {"success": False, "error": result.get("error", "Capture failed")}
@@ -152,36 +163,75 @@ def capture_screenshot() -> dict[str, str | bool]:
         except (OSError, IOError) as e:
             logging.error("Failed to add rulers: %s", e)
             return result  # Return original if ruler add fails
-
-    # Catch-all for unexpected errors in screenshot capture (intentional for robustness)
     except (OSError, IOError, subprocess.CalledProcessError) as e:
         logging.error("[MCP] Exception in capture_screenshot: %s", e)
         return {"success": False, "error": f"Exception in MCP tool: {e}"}
-    # Duplicate except for demonstration; can be removed or merged
-    # except Exception as e:
-    #     logging.error("[MCP] Exception in capture_screenshot: %s", e)
-    #     return {"success": False, "error": f"Exception in MCP tool: {e}"}
     finally:
         logging.info("[MCP] capture_screenshot tool exit")
 
 
 @mcp.tool()
-def compare_images(img1_path: str, img2_path: str) -> bool:
-    """Compare two images for equality.
+def compare_images(img1_path: str, img2_path: str) -> dict:
+    """
+    Compare two images for equality using the configured Vision-Language Model (VLM).
 
     Args:
         img1_path (str): Path to the first image.
         img2_path (str): Path to the second image.
 
     Returns:
-        bool: True if images are equal, False otherwise.
+        dict: {
+            'success': bool,
+            'equal': str (description or result),
+            'error': str (if any)
+        }
     """
-    return compare_func(img1_path, img2_path)
+    try:
+        logging.info("Received compare_images request for:\n- %s\n- %s", img1_path, img2_path)
+        
+        # Convert to absolute paths
+        abs_img1 = os.path.abspath(img1_path)
+        abs_img2 = os.path.abspath(img2_path)
+        
+        # Verify both files exist with debug info
+        logging.info("Checking image 1 at: %s", abs_img1)
+        if not os.path.exists(abs_img1):
+            logging.error("Image 1 not found at: %s", abs_img1)
+            return {"success": False, "error": f"Image not found: {abs_img1}"}
+            
+        logging.info("Checking image 2 at: %s", abs_img2)
+        if not os.path.exists(abs_img2):
+            logging.error("Image 2 not found at: %s", abs_img2)
+            return {"success": False, "error": f"Image not found: {abs_img2}"}
+            
+        logging.info("Both images found, proceeding with comparison")
+        
+        # Read and log first few bytes of each image
+        with open(abs_img1, 'rb') as f:
+            img1_head = f.read(16)
+            logging.debug("Image 1 header: %s", img1_head)
+            
+        with open(abs_img2, 'rb') as f:
+            img2_head = f.read(16)
+            logging.debug("Image 2 header: %s", img2_head)
+            
+        try:
+            result = vlm_agent.compare_images(abs_img1, abs_img2)
+            logging.info("Comparison completed successfully")
+            logging.debug("Full comparison result: %s", result)
+            return {"success": True, "equal": result}
+        except Exception as e:
+            logging.error("Comparison failed: %s", str(e), exc_info=True)
+            return {"success": False, "error": str(e)}
+    except Exception as e:
+        logging.error("Image comparison failed: %s", e)
+        return {"success": False, "error": str(e)}
 
 
 @mcp.tool()
 def analyze_screenshot(image_path: str, prompt: str) -> str:
-    """Analyze a screenshot using VLM
+    """
+    Analyze a screenshot using the configured Vision-Language Model (VLM).
 
     Args:
         image_path: Path to screenshot image
@@ -190,8 +240,8 @@ def analyze_screenshot(image_path: str, prompt: str) -> str:
     Returns:
         str: Analysis result or error message
     """
-    result = vlm_agent.analyze_screenshot(image_path, prompt)
-    return result or ""
+    return vlm_agent.analyze_image(image_path, prompt) or ""
+
 
 def _handle_type_action(text: str) -> bool:
     """Handle typing text using wtype."""
@@ -206,6 +256,7 @@ def _handle_type_action(text: str) -> bool:
     )
     return False
 
+
 def _handle_press_action(key: str) -> bool:
     """Handle key press using wtype."""
     if shutil.which("wtype"):
@@ -219,6 +270,7 @@ def _handle_press_action(key: str) -> bool:
     )
     return False
 
+
 def _handle_click_action(action: str) -> bool:
     """Handle mouse click using ydotool for Wayland."""
     # Validate coordinates
@@ -231,11 +283,16 @@ def _handle_click_action(action: str) -> bool:
         try:
             subprocess.run(
                 [
-                    "ydotool", "mousemove", "--absolute",
-                    "--x", str(coords[0]), "--y", str(coords[1])
+                    "ydotool",
+                    "mousemove",
+                    "--absolute",
+                    "--x",
+                    str(coords[0]),
+                    "--y",
+                    str(coords[1]),
                 ],
                 check=True,
-                timeout=5
+                timeout=5,
             )
             return True
         except Exception as e:
@@ -253,6 +310,7 @@ def _handle_click_action(action: str) -> bool:
     )
     return False
 
+
 def _parse_click_coordinates(action: str) -> tuple[int, int] | None:
     """Parse and validate click coordinates from action string."""
     try:
@@ -264,6 +322,7 @@ def _parse_click_coordinates(action: str) -> tuple[int, int] | None:
     except ValueError as e:
         logging.error("Invalid coordinate format: %s", e)
         return None
+
 
 def _prepare_x11_environment() -> dict | None:
     """Prepare X11 environment variables for xdotool execution."""
@@ -287,12 +346,10 @@ def _prepare_x11_environment() -> dict | None:
 
     return env
 
+
 def _execute_click_command(x: int, y: int, env: dict) -> bool:
     """Execute the xdotool command with prepared environment."""
-    command = [
-        "xdotool", "mousemove", str(x), str(y),
-        "sleep", "0.1", "click", "1"
-    ]
+    command = ["xdotool", "mousemove", str(x), str(y), "sleep", "0.1", "click", "1"]
 
     try:
         result = subprocess.run(
@@ -301,7 +358,7 @@ def _execute_click_command(x: int, y: int, env: dict) -> bool:
             check=True,
             capture_output=True,
             text=True,
-            timeout=5  # Add timeout to prevent hanging
+            timeout=5,  # Add timeout to prevent hanging
         )
         logging.info("xdotool executed successfully. Output: %s", result.stdout)
         return True
@@ -310,6 +367,7 @@ def _execute_click_command(x: int, y: int, env: dict) -> bool:
         if hasattr(e, "stderr") and e.stderr:
             logging.error("Command error: %s", e.stderr)
         return False
+
 
 def _handle_drag_action(action: str) -> bool:
     """Handle mouse drag using xdotool."""
@@ -336,20 +394,28 @@ def _handle_drag_action(action: str) -> bool:
 
     # Execute drag command sequence with delays
     command = [
-        "xdotool", "mousemove", str(x1), str(y1),
-        "sleep", "0.2", "mousedown", "1",
-        "sleep", "0.2", "mousemove", str(x2), str(y2),
-        "sleep", "0.2", "mouseup", "1"
+        "xdotool",
+        "mousemove",
+        str(x1),
+        str(y1),
+        "sleep",
+        "0.2",
+        "mousedown",
+        "1",
+        "sleep",
+        "0.2",
+        "mousemove",
+        str(x2),
+        str(y2),
+        "sleep",
+        "0.2",
+        "mouseup",
+        "1",
     ]
 
     try:
         subprocess.run(
-            command,
-            env=env,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=5
+            command, env=env, check=True, capture_output=True, text=True, timeout=5
         )
         logging.info("xdotool drag executed successfully")
         return True
@@ -374,7 +440,7 @@ def execute_action(action: str) -> bool:
         "type:": lambda: _handle_type_action(action[5:]),
         "press:": lambda: _handle_press_action(action[6:]),
         "click:": lambda: _handle_click_action(action),
-        "drag:": lambda: _handle_drag_action(action)
+        "drag:": lambda: _handle_drag_action(action),
     }
 
     try:
@@ -429,7 +495,8 @@ def capture_and_analyze(prompt: str) -> dict:
             "analysis": analysis,
             "filesize": os.path.getsize(filename),
         }
-    # Catch-all for unexpected errors in capture and analyze (intentional for robustness)
+    # Catch-all for unexpected errors in capture and analyze
+    # (intentional for robustness)
     except (OSError, IOError, ValueError) as e:
         return {"success": False, "error": str(e)}
 

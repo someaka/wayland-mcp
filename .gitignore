@@ -48,8 +48,9 @@ htmlcov/
 
 # Misc
 *.lock
-.roo/mcp.json
-.roo/mcp.json
-screenshot.png
 wayland_mcp/test_evemu_drag.py
+wayland_mcp/test_evemu_scroll.py
 wayland_mcp/test_mouse.py
+test_openrouter.py
+screenshot1.png
+screenshot.png
