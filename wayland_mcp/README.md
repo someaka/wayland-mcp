@@ -3,7 +3,7 @@
 # Wayland MCP Server
 
 [![Status: WIP](https://img.shields.io/badge/status-WIP-yellow)](https://github.com/someaka/wayland-mcp)
-[![License: GPT3](https://img.shields.io/badge/license-GPT3-blue)](#license)
+[![License: GPL3](https://img.shields.io/badge/license-GPL3-blue)](#license)
 
 > **Note:** This package was created because existing screenshot solutions didn't work reliably on my Wayland setup.
 > **Wayland MCP** provides screenshot, analysis, mouse and keyboard control tools for modern Linux desktops.
@@ -11,33 +11,35 @@
 ---
 
 ## Features
-  
-  - **Custom VLM integration for analysis**
-  - **Images comparison**
-  - **Mouse & keyboard input simulation**
 
+- **Screenshot & Analysis**
+  - Custom VLM integration for image analysis
+  - Image comparison capabilities
+
+- **Input Simulation**
+  - Mouse control (move, click, drag, scroll)
+  - Keyboard input (typing, key presses)
+  - Action chaining for complex sequences
+
+---
 
 ## ⚠️ Security Warning
 
 > **WARNING:** Enabling input control gives the MCP server full access to your mouse and keyboard.
 > Only use with trusted MCP servers and models.
 
-## Input Control Setup
+---
 
-To enable mouse and keyboard control (move, click, drag, scroll, type):
+## Quick Start
 
+### Input Control Setup
 ```bash
 ./wayland_mcp/setup.sh
 ```
+Configures permissions for `evemu-event` to control input devices.
 
-This configures permissions for `evemu-event` to control input devices.
-
----
-
-## MCP Server Configuration
-
-Add to your MCP server config (e.g., `.roo/mcp.json`):
-
+### MCP Server Configuration
+Add to your MCP server config (`.roo/mcp.json`):
 ```json
 {
   "mcpServers": {
@@ -57,10 +59,10 @@ Add to your MCP server config (e.g., `.roo/mcp.json`):
   }
 }
 ```
+
 ---
 
 ## Development
-
 ```bash
 git clone https://github.com/someaka/wayland-mcp
 cd wayland-mcp
@@ -71,5 +73,4 @@ pip install -e .
 
 ## License
 
-GPT3
-
+GPL 3

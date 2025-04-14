@@ -29,7 +29,25 @@ class MouseController:
 
     def move_to(self, x, y):
         """
-        Move mouse using large negative REL_X/REL_Y to reset, then relative move.
+        Move mouse relative to current position using REL_X/REL_Y events.
+        Args:
+            x: Relative horizontal movement (pixels)
+            y: Relative vertical movement (pixels)
+        """
+        self._evemu(
+            ["--type", "EV_REL", "--code", "REL_X", "--value", str(x), "--sync"]
+        )
+        self._evemu(
+            ["--type", "EV_REL", "--code", "REL_Y", "--value", str(y), "--sync"]
+        )
+        time.sleep(0.05)
+
+    def move_to_absolute(self, x, y):
+        """
+        Move mouse to absolute screen coordinates by first resetting to (0,0).
+        Args:
+            x: Absolute horizontal position (pixels)
+            y: Absolute vertical position (pixels)
         """
         # Reset to (0,0)
         self._evemu(
