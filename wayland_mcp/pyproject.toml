@@ -1,12 +1,13 @@
 [project]
 name = "wayland-mcp"
-version = "0.2.3"
+version = "0.2.5"
 description = "Wayland MCP server (Python, uvx-compatible)"
 readme = "README.md"
 authors = [{ name = "someaka" }]
 dependencies = [
     "requests",
-    "fastmcp"
+    "fastmcp",
+    "Pillow"
 ]
 requires-python = ">=3.8"
 
