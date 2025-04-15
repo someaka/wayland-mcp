@@ -97,14 +97,15 @@ def restore_effects():
 
 
 # pylint: disable=too-many-branches
-def capture_screenshot(output_path=None, mode="auto", geometry=None):
+def capture_screenshot(output_path=None, mode="auto", geometry=None, include_mouse=True):
     """
-    Capture screenshot with optional region selection
+    Capture screenshot with optional region selection and mouse cursor
 
     Args:
         output_path: Output file path
         mode: 'auto'|'region'|'window' - Capture mode
         geometry: Optional pre-defined geometry (x,y,w,h)
+        include_mouse: Whether to include mouse cursor in capture (default: True)
 
     Returns:
         dict: {'success': bool, 'filename': str, 'error': str}
@@ -126,8 +127,11 @@ def capture_screenshot(output_path=None, mode="auto", geometry=None):
         # 1. First try ksnip (if available)
         if os.path.exists("/usr/bin/ksnip"):
             try:
+                cmd = ["ksnip", "-f", output_path, "-m"]
+                if include_mouse:
+                    cmd.append("-c")  # Include cursor
                 result = subprocess.run(
-                    ["ksnip", "-f", output_path, "-m"],
+                    cmd,
                     env=env,
                     capture_output=True,
                     timeout=15,
@@ -140,8 +144,11 @@ def capture_screenshot(output_path=None, mode="auto", geometry=None):
 
         # 2. Fallback to gnome-screenshot (minimized flash)
         try:
+            cmd = ["gnome-screenshot", "-f", output_path]
+            if include_mouse:
+                cmd.append("--include-pointer")
             result = subprocess.run(
-                ["gnome-screenshot", "-f", output_path],
+                cmd,
                 env=env,
                 capture_output=True,
                 timeout=30,  # Increased timeout for slower systems
@@ -176,6 +183,9 @@ def capture_screenshot(output_path=None, mode="auto", geometry=None):
         # 3. Final fallback to grim if on Wayland
         if os.environ.get("WAYLAND_DISPLAY") and shutil.which("grim"):
             try:
+                if include_mouse:
+                    logging.warning("Grim doesn't support cursor capture - mouse won't be visible")
+                
                 cmd = ["grim", output_path]
                 if mode == "region" and shutil.which("slurp"):
                     cmd = ["grim", "-g", "$(slurp)", output_path]
@@ -383,15 +393,26 @@ class VLMAgent:
             logging.info("VLM request completed in %.2fs", elapsed)
 
             if response.status_code == 200:
-                result = response.json()["choices"][0]["message"]["content"]
-                logging.info("VLM analysis result: %.200s...", result)
-                return result
-            # Handle API error outside the 'if' block
-            logging.error(
-                "VLM API error: %d - %s", response.status_code, response.text
-            )
-            # Return f-string directly to reduce local variables
-            return f"VLM API error: {response.status_code} - {response.text}"
+                try:
+                    result = response.json()["choices"][0]["message"]["content"]
+                    logging.info("VLM analysis result: %.200s...", result)
+                    return result
+                except KeyError as e:
+                    error_msg = f"VLM API response format error: {str(e)}. Full response: {response.text}"
+                    if "quota" in response.text.lower():
+                        error_msg = "API quota exceeded. Please switch to a different API key or wait until quota resets."
+                    logging.error(error_msg)
+                    return error_msg
+
+            # Handle API errors with more specific messages
+            error_msg = f"VLM API error {response.status_code}"
+            if response.status_code == 429:
+                error_msg = "API quota exceeded. Please switch to a different API key or wait until quota resets."
+            elif "quota" in response.text.lower():
+                error_msg = "API quota exceeded. Please switch to a different API key or wait until quota resets."
+            
+            logging.error("%s: %s", error_msg, response.text)
+            return f"{error_msg}\nResponse details: {response.text}"
         except requests.exceptions.RequestException as e:
             logging.error("VLM request failed: %s", str(e))
             # Return f-string directly to reduce local variables

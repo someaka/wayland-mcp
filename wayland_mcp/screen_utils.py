@@ -17,11 +17,12 @@ class ScreenController:
         """
         self.vlm_agent = vlm_agent
 
-    def capture(self, filename: str = "screenshot.png") -> dict:
+    def capture(self, filename: str = "screenshot.png", include_mouse: bool = True) -> dict:
         """Capture screenshot with measurement rulers.
 
         Args:
             filename: Output filename for the screenshot
+            include_mouse: Whether to include mouse cursor (default: True)
 
         Returns:
             dict: {
@@ -31,7 +32,7 @@ class ScreenController:
             }
         """
         try:
-            result = capture_func(filename)
+            result = capture_func(filename, include_mouse=include_mouse)
             if not isinstance(result, dict) or not result.get("success"):
                 return {
                     "success": False,
@@ -115,11 +116,12 @@ class ScreenController:
                 "error": f"Analysis failed: {str(e)}"
             }
 
-    def capture_and_analyze(self, prompt: str) -> dict:
+    def capture_and_analyze(self, prompt: str, include_mouse: bool = True) -> dict:
         """Capture and analyze screenshot in one operation.
 
         Args:
             prompt: Analysis prompt/question
+            include_mouse: Whether to include mouse cursor (default: True)
 
         Returns:
             dict: {
@@ -131,7 +133,7 @@ class ScreenController:
             }
         """
         try:
-            result = self.capture()
+            result = self.capture(include_mouse=include_mouse)
             if not result.get("success"):
                 return result
 

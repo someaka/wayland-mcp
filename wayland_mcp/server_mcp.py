@@ -56,26 +56,8 @@ if not OPENROUTER_API_KEY:
         logging.error("Failed to load API key: %s", e)
         OPENROUTER_API_KEY = ""
 
-def _find_mouse_device() -> str:
-    """Find a writable mouse event device."""
-    for event in os.listdir("/dev/input"):
-        if event.startswith("event"):
-            dev_path = f"/dev/input/{event}"
-            try:
-                desc = subprocess.check_output(["evemu-describe", dev_path], text=True, timeout=1)
-                if "BTN_LEFT" in desc and "REL_X" in desc:
-                    return dev_path
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-                continue
-    return ""
-
-# Initialize core components with device auto-detection
-MOUSE_DEV = _find_mouse_device()
-if not MOUSE_DEV:
-    MOUSE_DEV = "/dev/input/event9"  # Fallback to common path
-    logging.warning("Using fallback mouse device: %s", MOUSE_DEV)
-
-mouse = MouseController(MOUSE_DEV)
+# Initialize core components using MouseController's built-in detection
+mouse = MouseController()
 logging.info("Initialized MouseController with device: %s", mouse.device)
 keyboard = KeyboardController()
 screen = ScreenController(VLMAgent(OPENROUTER_API_KEY))
@@ -98,12 +80,13 @@ logging.info("Initialized FastMCP server on port %d", PORT)
 
 # Mouse control tools
 @mcp.tool()
-def move_mouse(x: int, y: int) -> dict:
+def move_mouse(x: int, y: int, relative: bool = False) -> dict:
     """Move mouse to specified screen coordinates.
 
     Args:
         x: Horizontal position (0 = left)
         y: Vertical position (0 = top)
+        relative: If True, moves relative to current position (default: False)
 
     Returns:
         dict: {
@@ -111,11 +94,17 @@ def move_mouse(x: int, y: int) -> dict:
             'error': str (if failed)
         }
 
-    Example:
-        move_mouse(100, 200)  # Moves to x=100, y=200
+    Examples:
+        move_mouse(100, 200)  # Moves to absolute x=100, y=200
+        move_mouse(10, 10, relative=True)  # Moves 10px right and down
     """
     try:
-        mouse.move_to(x, y)
+        if relative:
+            mouse.move_to(x, y)
+        else:
+            print("Moving to absolute coordinates")
+            print(f"Moving to x={x}, y={y}")
+            mouse.move_to_absolute(x, y)
         return {"success": True}
     except (RuntimeError, IOError) as e:
         return {"success": False, "error": str(e)}
@@ -246,15 +235,25 @@ def _handle_click_action() -> dict:
         return {"success": False, "error": str(e)}
 
 def _handle_move_to_action(coords_str) -> dict:
-    """Handle move to absolute coordinates.
+    """Handle move to coordinates (absolute or relative).
     Args:
-        coords_str: The coordinates string in format "x,y" (e.g. "500,500")
+        coords_str: The coordinates string in format:
+          - "x,y" for absolute movement (e.g. "500,500")
+          - "rel:x,y" for relative movement (e.g. "rel:10,-5")
     """
     try:
+        relative = coords_str.startswith("rel:")
+        if relative:
+            coords_str = coords_str[4:]
+            
         coords = _parse_coordinates(coords_str)
         if not coords:
             return {"success": False, "error": "Invalid coordinates"}
-        mouse.move_to_absolute(*coords)
+            
+        if relative:
+            mouse.move_to(*coords)
+        else:
+            mouse.move_to_absolute(*coords)
         return {"success": True}
     except (RuntimeError, ValueError) as e:
         logging.error("Move to action failed: %s", e)
@@ -304,7 +303,7 @@ def make_handler(prefix: str, handler: callable) -> callable:
     """
     return lambda action: handler(action[len(prefix):])
 
-register_handler("type:", make_handler("type:", _handle_type_action))
+register_handler("type:", lambda action: _handle_type_action(action[5:]))
 register_handler("press:", make_handler("press:", _handle_press_action))
 register_handler("click", lambda _: _handle_click_action())
 register_handler("click:", lambda _: _handle_click_action())
@@ -327,7 +326,8 @@ def execute_action(action: str) -> bool:
       type:text - Type text
       press:key - Press key
       click/click: - Click at current position (both formats supported)
-      move_to:x,y - Move to coordinates
+      move_to:x,y - Move to absolute coordinates (default)
+      move_to:rel:x,y - Move relative to current position
       drag:x1,y1:x2,y2 - Drag between points
       scroll:amount - Vertical scroll (positive=up, negative=down)
         Note: Each unit = 1 scroll notch (120 = high-def scroll). Typical: 15-120.
@@ -346,6 +346,7 @@ def execute_action(action: str) -> bool:
         "type:": _handle_type_action,
         "press:": _handle_press_action,
         "click": _handle_click_action,
+        "move_to:": lambda: _handle_move_to_action(action[8:]),
         "drag:": _handle_drag_action,
         "scroll:": _handle_scroll_action,
     }

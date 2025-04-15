@@ -24,6 +24,7 @@ MODIFIER_KEYS = {
     'ctrl': 'KEY_LEFTCTRL',
     'alt': 'KEY_LEFTALT',
     'meta': 'KEY_LEFTMETA',
+    'super': 'KEY_LEFTMETA',
     'space': 'KEY_SPACE',
     'enter': 'KEY_ENTER',
     'tab': 'KEY_TAB',

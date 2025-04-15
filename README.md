@@ -1,6 +1,6 @@
 
 
-# Wayland MCP Server
+# 🚀 Wayland MCP Server
 
 [![Status: WIP](https://img.shields.io/badge/status-WIP-yellow)](https://github.com/someaka/wayland-mcp)
 [![License: GPL3](https://img.shields.io/badge/license-GPL3-blue)](#license)
@@ -10,13 +10,13 @@
 
 ---
 
-## Features
+## ✨ Features
 
-- **Screenshot & Analysis**
+- **📸 Screenshot & Analysis**
   - Custom VLM integration for image analysis
   - Image comparison capabilities
 
-- **Input Simulation**
+- **🖱️ Input Simulation**
   - Mouse control (move, click, drag, scroll)
   - Keyboard input (typing, key presses)
   - Action chaining for complex sequences
@@ -30,15 +30,17 @@
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-### Input Control Setup
+### 🔧 Input Control Setup
 ```bash
 ./setup.sh
 ```
+[View setup.sh on GitHub](https://github.com/someaka/wayland-mcp/blob/main/setup.sh)
+
 Configures permissions for `evemu-event` to control input devices.
 
-### MCP Server Configuration
+### ⚙️ MCP Server Configuration
 Add to your MCP server config (`.roo/mcp.json`):
 ```json
 {
@@ -62,7 +64,7 @@ Add to your MCP server config (`.roo/mcp.json`):
 
 ---
 
-## Development
+## 🛠️ Development
 ```bash
 git clone https://github.com/someaka/wayland-mcp
 cd wayland-mcp
@@ -71,6 +73,6 @@ pip install -e .
 
 ---
 
-## License
+## 📜 License
 
 GPL 3

@@ -1,9 +1,10 @@
 [project]
 name = "wayland-mcp"
-version = "0.3.2.1"
+version = "0.3.2.1.0"
 description = "Wayland MCP server (Python, uvx-compatible)"
 readme = "README.md"
 authors = [{ name = "someaka" }]
+urls = { repository = "https://github.com/someaka/wayland-mcp" }
 dependencies = [
     "requests",
     "fastmcp",
