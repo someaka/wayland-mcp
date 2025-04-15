@@ -1,6 +1,6 @@
 [project]
 name = "wayland-mcp"
-version = "0.3.2"
+version = "0.3.2.1"
 description = "Wayland MCP server (Python, uvx-compatible)"
 readme = "README.md"
 authors = [{ name = "someaka" }]
