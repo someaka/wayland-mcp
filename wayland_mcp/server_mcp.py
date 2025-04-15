@@ -28,7 +28,7 @@ import json
 import subprocess
 from typing import Optional, Tuple
 
-from fastmcp import FastMCP  # pylint: disable=import-error
+from fastmcp import FastMCP 
 from wayland_mcp.chain_processor import ChainProcessor, register_handler
 from wayland_mcp.mouse_utils import MouseController
 from wayland_mcp.keyboard_utils import KeyboardController

@@ -1,6 +1,6 @@
 [project]
 name = "wayland-mcp"
-version = "0.3.0"
+version = "0.3.2"
 description = "Wayland MCP server (Python, uvx-compatible)"
 readme = "README.md"
 authors = [{ name = "someaka" }]
@@ -16,8 +16,8 @@ wayland-mcp = "wayland_mcp.server_mcp:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["wayland_mcp"]
-
-
+package-dir = {"" = "wayland_mcp"}
+include-package-data = true
 
 [build-system]
 requires = ["hatchling"]

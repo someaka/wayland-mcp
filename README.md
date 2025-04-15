@@ -34,7 +34,7 @@
 
 ### Input Control Setup
 ```bash
-./wayland_mcp/setup.sh
+./setup.sh
 ```
 Configures permissions for `evemu-event` to control input devices.
 
