@@ -136,6 +136,10 @@ def capture_screenshot(output_path=None, mode="auto", geometry=None, include_mou
                 return {"success": True, "filename": output_path}
         except subprocess.TimeoutExpired as e:
             logging.error("gnome-screenshot failed: %s", e)
+        except FileNotFoundError as e:
+            logging.warning("gnome-screenshot not found: %s", e)
+        except subprocess.CalledProcessError as e:
+            logging.warning("gnome-screenshot returned error code %d: %s", e.returncode, e.stderr.decode() if e.stderr else "No stderr")
         # Handle region/window selection
         if mode == "region" and not geometry:
             try:
@@ -170,6 +174,29 @@ def capture_screenshot(output_path=None, mode="auto", geometry=None, include_mou
                 return {"success": True, "filename": output_path}
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
                 logging.error("Grim fallback failed: %s", e)
+            except FileNotFoundError as e:
+                logging.warning("Grim not found: %s", e)
+        # 4. Fallback to spectacle (KDE screenshot tool)
+        if shutil.which("spectacle"):
+            try:
+                cmd = ["spectacle", "--fullscreen", "--background", "--nonotify", "--output", output_path]
+                result = subprocess.run(
+                    cmd,
+                    env=env,
+                    capture_output=True,
+                    timeout=30,
+                    check=False,
+                )
+                if result.returncode == 0:
+                    return {"success": True, "filename": output_path}
+                else:
+                    logging.error("spectacle failed with return code: %d, stderr: %s", result.returncode, result.stderr.decode() if result.stderr else "No stderr")
+            except subprocess.TimeoutExpired as e:
+                logging.error("spectacle failed: %s", e)
+            except FileNotFoundError as e:
+                logging.warning("spectacle not found: %s", e)
+            except Exception as e:
+                logging.error("spectacle failed with exception: %s", e)
         return {"success": False, "error": "All capture methods failed"}
     finally:
         restore_effects()
@@ -279,11 +306,8 @@ class VLMAgent:
             str: Analysis result or error message
         """
         # Validate inputs
-        if not self.api_key or not os.path.exists(image_path):
-            if not self.api_key:
-                error_msg = "Error: No API key configured for VLMAgent"
-            else:
-                error_msg = f"Error: Image file not found - {image_path}"
+        if not os.path.exists(image_path):
+            error_msg = f"Error: Image file not found - {image_path}"
             logging.error(error_msg)
             return error_msg
         # Encode image
